@@ -1,0 +1,41 @@
+name: campus_companion
+description: A campus companion app for students, faculty, and admins.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Fonts matching the web reference (Fraunces + IBM Plex Sans)
+  google_fonts: ^6.2.1
+
+  # tel: / mailto: links from the faculty directory
+  url_launcher: ^6.3.0
+
+  # Local offline cache for timetable / notices (Phase 3 of the roadmap)
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Local reminders (10 minutes before class)
+  flutter_local_notifications: ^17.2.2
+
+  # Date / countdown formatting
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.11
+
+flutter:
+  uses-material-design: true
