@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediConnect — Doctor & Appointment Management Platform</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 & ReactDOM CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel Standalone CDN -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#ecfeff',
+              100: '#cffafe',
+              500: '#06b6d4',
+              600: '#0891b2',
+              700: '#0e7490',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printable-pass, #printable-pass * {
+        visibility: visible;
+      }
+      #printable-pass {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-cyan-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, createContext, useContext } = React;
+
+    // ==========================================
+    // 1. SEED DATA & CONSTANTS
+    // ==========================================
+    const SPECIALTIES = [
+      { id: 'all', name: 'All Specialties', icon: '🩺', count: 8 },
+      { id: 'cardiology', name: 'Cardiology', icon: '❤️', count: 1 },
+      { id: 'dermatology', name: 'Dermatology', icon: '✨', count: 1 },
+      { id: 'pediatrics', name: 'Pediatrics', icon: '👶', count: 1 },
+      { id: 'orthopedics', name: 'Orthopedics', icon: '🦴', count: 1 },
+      { id: 'neurology', name: 'Neurology', icon: '🧠', count: 1 },
+      { id: 'general', name: 'General Medicine', icon: '🩺', count: 1 },
+      { id: 'psychiatry', name: 'Psychiatry', icon: '😊', count: 1 },
+      { id: 'ent', name: 'ENT Specialist', icon: '👂', count: 1 }
+    ];
+
+    const INITIAL_DOCTORS = [
+      {
+        id: 'doc-1',
+        name: 'Dr. Rajesh Verma',
+        degrees: 'MBBS, MD (Medicine), DM (Cardiology)',
+        specialty: 'Cardiology',
+        specialtyId: 'cardiology',
+        experienceYears: 16,
+        rating: 4.9,
+        reviewsCount: 184,
+        consultationFee: 900,
+        hospital: 'Max Super Speciality Hospital, Vaishali',
+        clinicAddress: 'Suite 304, Cardio Wing, Sec-1, Vaishali, Ghaziabad',
+        avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
+        about: 'Acclaimed cardiologist with 16+ years of clinical experience in angioplasty, arrhythmia management, and preventive heart care. Known for compassionate patient guidance.',
+        availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        consultationModes: ['In-Clinic', 'Video Call'],
+        slotDurationMinutes: 30,
+        workingHours: {
+          morning: { start: '09:30', end: '13:00' },
+          evening: { start: '17:00', end: '20:30' }
+        }
+      },
+      {
+        id: 'doc-2',
+        name: 'Dr. Ananya Sharma',
+        degrees: 'MBBS, MD (Dermatology)',
+        specialty: 'Dermatology',
+        specialtyId: 'dermatology',
+        experienceYears: 11,
+        rating: 4.8,
+        reviewsCount: 142,
+        consultationFee: 750,
+        hospital: 'Skin & Aesthetics Care Clinic',
+        clinicAddress: 'Plot 14, Habitat Center, Ahinsa Khand 1, Indirapuram',
+        avatar: 'https://images.unsplash.com/photo-1594824813583-b9df74c65dbb?auto=format&fit=crop&q=80&w=400',
+        about: 'Specializes in clinical dermatology, acne therapies, allergic skin conditions, pediatric skin health, and modern non-invasive cosmetic treatments.',
+        availableDays: ['Mon', 'Wed', 'Fri', 'Sat'],
+        consultationModes: ['In-Clinic', 'Video Call'],
+        slotDurationMinutes: 20,
+        workingHours: {
+          morning: { start: '10:00', end: '13:30' },
+          evening: { start: '16:30', end: '19:30' }
+        }
+      },
+      {
+        id: 'doc-3',
+        name: 'Dr. Vikram Malhotra',
+        degrees: 'MBBS, MS (Orthopedics), MCh (Ortho)',
+        specialty: 'Orthopedics',
+        specialtyId: 'orthopedics',
+        experienceYears: 19,
+        rating: 4.9,
+        reviewsCount: 215,
+        consultationFee: 1000,
+        hospital: 'Fortis Hospital & Bone Joint Institute',
+        clinicAddress: 'Orthopedic OPD, Fortis Medical Complex, Sec-62, Noida',
+        avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
+        about: 'Renowned joint replacement and arthroscopy surgeon with thousands of successful knee, hip, and shoulder restorations and personalized recovery programs.',
+        availableDays: ['Tue', 'Wed', 'Thu', 'Sat'],
+        consultationModes: ['In-Clinic'],
+        slotDurationMinutes: 30,
+        workingHours: {
+          morning: { start: '09:00', end: '12:30' },
+          evening: { start: '17:30', end: '20:30' }
+        }
+      },
+      {
+        id: 'doc-4',
+        name: 'Dr. Priya Nambiar',
+        degrees: 'MBBS, DCH, DNB (Pediatrics)',
+        specialty: 'Pediatrics',
+        specialtyId: 'pediatrics',
+        experienceYears: 13,
+        rating: 4.9,
+        reviewsCount: 167,
+        consultationFee: 700,
+        hospital: 'Little Angels Child Care Center',
+        clinicAddress: 'Shop 21-22, Crossings Republik, Ghaziabad',
+        avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=400',
+        about: 'Compassionate pediatric specialist caring for infants, toddlers, and adolescents with focus on developmental tracking, vaccinations, and nutrition.',
+        availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        consultationModes: ['In-Clinic', 'Video Call'],
+        slotDurationMinutes: 20,
+        workingHours: {
+          morning: { start: '09:00', end: '13:00' },
+          evening: { start: '16:00', end: '19:00' }
+        }
+      },
+      {
+        id: 'doc-5',
+        name: 'Dr. Arvind Saxena',
+        degrees: 'MBBS, MD (Medicine), DM (Neurology)',
+        specialty: 'Neurology',
+        specialtyId: 'neurology',
+        experienceYears: 18,
+        rating: 4.8,
+        reviewsCount: 138,
+        consultationFee: 1200,
+        hospital: 'NeuroCare Institute & Brain Center',
+        clinicAddress: 'Tower B, Medical District, Raj Nagar Extension',
+        avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=400',
+        about: 'Leading neurologist specializing in migraine care, epilepsy, stroke rehabilitation, Parkinsonism, and peripheral nerve conditions.',
+        availableDays: ['Mon', 'Tue', 'Thu', 'Fri'],
+        consultationModes: ['In-Clinic', 'Video Call'],
+        slotDurationMinutes: 40,
+        workingHours: {
+          morning: { start: '10:00', end: '13:00' },
+          evening: { start: '17:00', end: '20:00' }
+        }
+      },
+      {
+        id: 'doc-6',
+        name: 'Dr. Sneha Roy',
+        degrees: 'MBBS, MD (Internal Medicine)',
+        specialty: 'General Medicine',
+        specialtyId: 'general',
+        experienceYears: 12,
+        rating: 4.9,
+        reviewsCount: 196,
+        consultationFee: 600,
+        hospital: 'Apex Healthcare & Family Wellness',
+        clinicAddress: 'First Floor, Apollo Clinic, Kavi Nagar, Ghaziabad',
+        avatar: 'https://images.unsplash.com/photo-1594824813583-b9df74c65dbb?auto=format&fit=crop&q=80&w=400',
+        about: 'Family physician with deep expertise in managing chronic hypertension, Type 2 diabetes, viral fevers, and comprehensive wellness health checks.',
+        availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        consultationModes: ['In-Clinic', 'Video Call'],
+        slotDurationMinutes: 20,
+        workingHours: {
+          morning: { start: '08:30', end: '12:30' },
+          evening: { start: '17:00', end: '20:30' }
+        }
+      },
+      {
+        id: 'doc-7',
+        name: 'Dr. Siddharth Kapoor',
+        degrees: 'MBBS, MD (Psychiatry)',
+        specialty: 'Psychiatry',
+        specialtyId: 'psychiatry',
+        experienceYears: 10,
+        rating: 4.7,
+        reviewsCount: 92,
+        consultationFee: 1100,
+        hospital: 'MindWell Clinic for Mental Health',
+        clinicAddress: 'Opposite Central Park, Sector 14, Vasundhara',
+        avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400',
+        about: 'Empathetic mental health professional treating anxiety, depression, insomnia, and work-related stress with medical therapy and counseling.',
+        availableDays: ['Tue', 'Thu', 'Sat', 'Sun'],
+        consultationModes: ['Video Call', 'In-Clinic'],
+        slotDurationMinutes: 45,
+        workingHours: {
+          morning: { start: '11:00', end: '14:00' },
+          evening: { start: '16:00', end: '19:30' }
+        }
+      },
+      {
+        id: 'doc-8',
+        name: 'Dr. Meenakshi Joshi',
+        degrees: 'MBBS, MS (ENT)',
+        specialty: 'ENT Specialist',
+        specialtyId: 'ent',
+        experienceYears: 14,
+        rating: 4.8,
+        reviewsCount: 118,
+        consultationFee: 700,
+        hospital: 'Voice & Hearing ENT Care Hospital',
+        clinicAddress: 'Near Wave Cinema, GT Road, Ghaziabad',
+        avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=400',
+        about: 'ENT specialist providing expert care for sinus infections, allergic rhinitis, tonsillitis, ear pain, and hearing rehabilitations.',
+        availableDays: ['Mon', 'Wed', 'Fri', 'Sat'],
+        consultationModes: ['In-Clinic'],
+        slotDurationMinutes: 20,
+        workingHours: {
+          morning: { start: '09:30', end: '13:00' },
+          evening: { start: '17:00', end: '19:30' }
+        }
+      }
+    ];
+
+    const getTodayDateStr = () => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const INITIAL_APPOINTMENTS = [
+      {
+        id: 'APT-2026-101',
+        doctorId: 'doc-1',
+        doctorName: 'Dr. Rajesh Verma',
+        specialty: 'Cardiology',
+        patientName: 'Vikas Sharma',
+        patientPhone: '+91 98112 34567',
+        patientEmail: 'vikas.sharma@gmail.com',
+        patientAge: 52,
+        patientGender: 'Male',
+        date: getTodayDateStr(),
+        timeSlot: '10:30 AM',
+        mode: 'In-Clinic',
+        fee: 900,
+        status: 'Confirmed',
+        reason: 'Routine cardiac follow-up, mild chest heaviness on exertion.',
+        consultationNotes: '',
+        prescription: ''
+      },
+      {
+        id: 'APT-2026-102',
+        doctorId: 'doc-1',
+        doctorName: 'Dr. Rajesh Verma',
+        specialty: 'Cardiology',
+        patientName: 'Sunita Agarwal',
+        patientPhone: '+91 98710 98765',
+        patientEmail: 'sunita.ag@outlook.com',
+        patientAge: 48,
+        patientGender: 'Female',
+        date: getTodayDateStr(),
+        timeSlot: '11:30 AM',
+        mode: 'Video Call',
+        fee: 900,
+        status: 'Confirmed',
+        reason: 'Blood pressure review and ECG interpretation.',
+        consultationNotes: '',
+        prescription: ''
+      },
+      {
+        id: 'APT-2026-103',
+        doctorId: 'doc-2',
+        doctorName: 'Dr. Ananya Sharma',
+        specialty: 'Dermatology',
+        patientName: 'Rohan Mehra',
+        patientPhone: '+91 99990 12345',
+        patientEmail: 'rohan.m@gmail.com',
+        patientAge: 27,
+        patientGender: 'Male',
+        date: getTodayDateStr(),
+        timeSlot: '10:00 AM',
+        mode: 'In-Clinic',
+        fee: 750,
+        status: 'Completed',
+        reason: 'Recurrent facial acne and skin hypersensitivity.',
+        consultationNotes: 'Diagnosed Grade 2 Acne Vulgaris. Advised gentle foaming cleanser and topical adapalene gel 0.1%. Avoid direct UV exposure without sunscreen.',
+        prescription: '1. Tab Doxycycline 100mg once daily (14 days)\n2. Adapalene 0.1% Gel at night\n3. SPF 50 Mineral Sunscreen daily'
+      },
+      {
+        id: 'APT-2026-104',
+        doctorId: 'doc-4',
+        doctorName: 'Dr. Priya Nambiar',
+        specialty: 'Pediatrics',
+        patientName: 'Aarav Gupta (Child)',
+        patientPhone: '+91 98101 22334',
+        patientEmail: 'pooja.gupta@yahoo.com',
+        patientAge: 4,
+        patientGender: 'Male',
+        date: getTodayDateStr(),
+        timeSlot: '12:00 PM',
+        mode: 'In-Clinic',
+        fee: 700,
+        status: 'Pending',
+        reason: 'High fever (102°F) for 2 days and dry cough.',
+        consultationNotes: '',
+        prescription: ''
+      }
+    ];
+
+    // ==========================================
+    // 2. ROOT APP COMPONENT
+    // ==========================================
+    function App() {
+      // Storage states
+      const [doctors, setDoctors] = useState(() => {
+        const d = localStorage.getItem('mediconnect_docs');
+        return d ? JSON.parse(d) : INITIAL_DOCTORS;
+      });
+
+      const [appointments, setAppointments] = useState(() => {
+        const a = localStorage.getItem('mediconnect_apts');
+        return a ? JSON.parse(a) : INITIAL_APPOINTMENTS;
+      });
+
+      // Role & Navigation
+      const [role, setRole] = useState('patient'); // 'patient' or 'doctor'
+      const [view, setView] = useState('browse'); // 'browse', 'my-appointments', 'doctor-dashboard', 'doctor-schedule'
+      const [activeDoctorId, setActiveDoctorId] = useState('doc-1');
+
+      // Filters
+      const [selectedSpecialty, setSelectedSpecialty] = useState('all');
+      const [searchQuery, setSearchQuery] = useState('');
+
+      // Modals
+      const [bookingDoctor, setBookingDoctor] = useState(null);
+      const [profileDoctor, setProfileDoctor] = useState(null);
+      const [confirmedPass, setConfirmedPass] = useState(null);
+      const [notesApt, setNotesApt] = useState(null);
+      const [prescriptionViewApt, setPrescriptionViewApt] = useState(null);
+
+      // Save to localStorage
+      useEffect(() => {
+        localStorage.setItem('mediconnect_docs', JSON.stringify(doctors));
+      }, [doctors]);
+
+      useEffect(() => {
+        localStorage.setItem('mediconnect_apts', JSON.stringify(appointments));
+      }, [appointments]);
+
+      const activeDoctor = doctors.find((d) => d.id === activeDoctorId) || doctors[0];
+
+      // Actions
+      const handleBookAppointment = (formData) => {
+        const randomId = 'APT-2026-' + Math.floor(1000 + Math.random() * 9000);
+        const newApt = {
+          id: randomId,
+          ...formData,
+          status: 'Confirmed',
+          consultationNotes: '',
+          prescription: '',
+          createdAt: new Date().toISOString()
+        };
+        setAppointments([newApt, ...appointments]);
+        setBookingDoctor(null);
+        setConfirmedPass(newApt);
+      };
+
+      const handleUpdateStatus = (id, newStatus) => {
+        setAppointments(appointments.map(a => a.id === id ? { ...a, status: newStatus } : a));
+      };
+
+      const handleSaveNotes = (id, notes, pres) => {
+        setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'Completed', consultationNotes: notes, prescription: pres } : a));
+        setNotesApt(null);
+      };
+
+      const handleSaveSchedule = (updated) => {
+        setDoctors(doctors.map(d => d.id === activeDoctorId ? { ...d, ...updated } : d));
+      };
+
+      const handleResetDemoData = () => {
+        if (confirm('Reset all demo doctors and appointments to default seed state?')) {
+          localStorage.removeItem('mediconnect_docs');
+          localStorage.removeItem('mediconnect_apts');
+          setDoctors(INITIAL_DOCTORS);
+          setAppointments(INITIAL_APPOINTMENTS);
+          alert('Demo data successfully restored!');
+        }
+      };
+
+      // Filtered doctors
+      const filteredDoctors = doctors.filter((doc) => {
+        const matchesSpec = selectedSpecialty === 'all' || doc.specialtyId === selectedSpecialty;
+        const q = searchQuery.toLowerCase().trim();
+        const matchesQ = !q || doc.name.toLowerCase().includes(q) || doc.specialty.toLowerCase().includes(q) || doc.hospital.toLowerCase().includes(q);
+        return matchesSpec && matchesQ;
+      });
+
+      // Stats for active doctor
+      const docApts = appointments.filter(a => a.doctorId === activeDoctorId);
+      const todayStr = getTodayDateStr();
+      const todayCount = docApts.filter(a => a.date === todayStr && a.status !== 'Cancelled').length;
+      const pendingCount = docApts.filter(a => a.status === 'Pending').length;
+      const completedCount = docApts.filter(a => a.status === 'Completed').length;
+      const revenue = docApts.filter(a => a.status === 'Completed').reduce((sum, a) => sum + (a.fee || 0), 0);
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          {/* Header */}
+          <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              {/* Logo */}
+              <div
+                className="flex items-center space-x-3 cursor-pointer"
+                onClick={() => { setRole('patient'); setView('browse'); }}
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-teal-500 flex items-center justify-center text-white font-bold text-xl shadow-md shadow-cyan-600/20">
+                  ✚
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xl font-extrabold tracking-tight text-slate-900">MediConnect</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
+                      Doctor &amp; Clinic
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 hidden sm:block">Doctor &amp; Appointment Management</p>
+                </div>
+              </div>
+
+              {/* Navigation Links */}
+              <nav className="flex items-center space-x-1 sm:space-x-2">
+                {role === 'patient' ? (
+                  <>
+                    <button
+                      onClick={() => setView('browse')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        view === 'browse' ? 'bg-cyan-50 text-cyan-700 border border-cyan-200' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Find Specialists
+                    </button>
+                    <button
+                      onClick={() => setView('my-appointments')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        view === 'my-appointments' ? 'bg-cyan-50 text-cyan-700 border border-cyan-200' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      My Bookings ({appointments.filter(a => a.status !== 'Cancelled').length})
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setView('doctor-dashboard')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        view === 'doctor-dashboard' ? 'bg-teal-50 text-teal-800 border border-teal-200' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Appointments Queue
+                    </button>
+                    <button
+                      onClick={() => setView('doctor-schedule')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        view === 'doctor-schedule' ? 'bg-teal-50 text-teal-800 border border-teal-200' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Schedule &amp; Slots
+                    </button>
+                  </>
+                )}
+              </nav>
+
+              {/* Role Switcher */}
+              <div className="flex items-center space-x-2">
+                {role === 'doctor' && (
+                  <select
+                    value={activeDoctorId}
+                    onChange={(e) => setActiveDoctorId(e.target.value)}
+                    className="hidden md:block bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none"
+                  >
+                    {doctors.map(d => (
+                      <option key={d.id} value={d.id}>{d.name} ({d.specialty})</option>
+                    ))}
+                  </select>
+                )}
+
+                <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
+                  <button
+                    onClick={() => { setRole('patient'); setView('browse'); }}
+                    className={`px-3 py-1 rounded-lg transition-all ${role === 'patient' ? 'bg-white text-cyan-800 shadow-xs' : 'text-slate-500'}`}
+                  >
+                    Patient View
+                  </button>
+                  <button
+                    onClick={() => { setRole('doctor'); setView('doctor-dashboard'); }}
+                    className={`px-3 py-1 rounded-lg transition-all ${role === 'doctor' ? 'bg-teal-600 text-white shadow-xs' : 'text-slate-500'}`}
+                  >
+                    Doctor Portal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Body */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* VIEW 1: PATIENT BROWSE */}
+            {role === 'patient' && view === 'browse' && (
+              <div className="space-y-8">
+                {/* Hero Banner */}
+                <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-cyan-950 to-teal-900 p-8 sm:p-12 text-white shadow-xl relative overflow-hidden">
+                  <div className="max-w-2xl relative z-10">
+                    <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 mb-3">
+                      ⚡ Instant Doctor Bookings • Zero Waiting
+                    </span>
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
+                      Consult Top Medical <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-teal-300">Specialists</span>
+                    </h1>
+                    <p className="text-sm sm:text-base text-slate-300 mt-4 leading-relaxed">
+                      Choose verified doctors across Cardiology, Pediatrics, Dermatology, and more. Book convenient in-clinic appointments or remote video consultations.
+                    </p>
+
+                    <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-white/10 text-xs">
+                      <div>
+                        <div className="text-2xl font-black text-cyan-300">{doctors.length}+</div>
+                        <div className="text-slate-400 text-[11px] font-medium">Top Specialists</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-teal-300">1,500+</div>
+                        <div className="text-slate-400 text-[11px] font-medium">Patients Treated</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-black text-amber-300">4.9 ★</div>
+                        <div className="text-slate-400 text-[11px] font-medium">Patient Satisfaction</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search by doctor name, medical specialty, or hospital..."
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                    />
+                    <span className="absolute left-3.5 top-3.5 text-slate-400">🔍</span>
+                  </div>
+
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">Filter by Specialty</span>
+                    <div className="flex flex-wrap gap-2">
+                      {SPECIALTIES.map(s => (
+                        <button
+                          key={s.id}
+                          onClick={() => setSelectedSpecialty(s.id)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                            selectedSpecialty === s.id
+                              ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          <span>{s.icon}</span>
+                          <span>{s.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Doctors Grid */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-slate-900">Available Doctors ({filteredDoctors.length})</h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredDoctors.map(doctor => (
+                      <div key={doctor.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden">
+                        <div className="p-6 pb-4">
+                          <div className="flex items-start space-x-4">
+                            <img src={doctor.avatar} alt={doctor.name} className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-xs" />
+                            <div className="flex-1 min-w-0">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
+                                {doctor.specialty}
+                              </span>
+                              <h3 className="text-base font-bold text-slate-900 mt-1 truncate">{doctor.name}</h3>
+                              <p className="text-xs text-slate-500 truncate">{doctor.degrees}</p>
+                              <div className="flex items-center space-x-1 text-xs text-amber-500 font-semibold mt-1">
+                                <span>★ {doctor.rating}</span>
+                                <span className="text-slate-400 font-normal">({doctor.reviewsCount})</span>
+                                <span className="text-slate-300">•</span>
+                                <span className="text-slate-600">{doctor.experienceYears}y Exp</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-slate-600 mt-4 line-clamp-2 leading-relaxed">{doctor.about}</p>
+
+                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                            <span className="truncate">{doctor.hospital}</span>
+                            <span className="text-emerald-600 font-bold text-[11px]">● Slots Today</span>
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400">Consultation</span>
+                            <div className="text-base font-black text-slate-900">₹{doctor.consultationFee}</div>
+                          </div>
+
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => setProfileDoctor(doctor)}
+                              className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl"
+                            >
+                              Bio
+                            </button>
+                            <button
+                              onClick={() => setBookingDoctor(doctor)}
+                              className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 rounded-xl shadow-xs"
+                            >
+                              Book Slot
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 2: MY APPOINTMENTS */}
+            {role === 'patient' && view === 'my-appointments' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+                  <div>
+                    <h1 className="text-xl font-bold text-slate-900">My Medical Appointments</h1>
+                    <p className="text-xs text-slate-500">Manage your appointment tickets, view status, and download prescriptions</p>
+                  </div>
+                  <button
+                    onClick={() => setView('browse')}
+                    className="px-4 py-2 text-xs font-bold text-white bg-cyan-600 rounded-xl hover:bg-cyan-700 shadow-xs"
+                  >
+                    + Book New Consultation
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {appointments.map(apt => (
+                    <div key={apt.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                      <div className="flex justify-between items-start pb-3 border-b border-slate-100">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold text-slate-400">{apt.id}</span>
+                          <h3 className="text-sm font-bold text-slate-900 mt-0.5">{apt.doctorName}</h3>
+                          <span className="text-xs text-cyan-700 font-semibold">{apt.specialty}</span>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          apt.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          apt.status === 'Completed' ? 'bg-cyan-50 text-cyan-700 border border-cyan-200' :
+                          apt.status === 'Pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                          'bg-rose-50 text-rose-700 border border-rose-200'
+                        }`}>
+                          ● {apt.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-semibold">SCHEDULE</span>
+                          <span className="font-bold text-slate-800">{apt.date}</span>
+                          <div className="text-slate-600 text-[11px]">{apt.timeSlot}</div>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-semibold">PATIENT &amp; MODE</span>
+                          <span className="font-bold text-slate-800">{apt.patientName}</span>
+                          <div className="text-slate-600 text-[11px]">{apt.mode} • ₹{apt.fee}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-2">
+                        {apt.status === 'Completed' ? (
+                          <button
+                            onClick={() => setPrescriptionViewApt(apt)}
+                            className="px-3 py-1.5 text-xs font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg"
+                          >
+                            View Prescription &amp; Advice 📜
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">Appointment scheduled</span>
+                        )}
+
+                        {apt.status === 'Confirmed' && (
+                          <button
+                            onClick={() => handleUpdateStatus(apt.id, 'Cancelled')}
+                            className="text-rose-600 hover:text-rose-800 font-bold"
+                          >
+                            Cancel Appointment
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 3: DOCTOR DASHBOARD */}
+            {role === 'doctor' && view === 'doctor-dashboard' && (
+              <div className="space-y-6">
+                {/* Doctor Profile Banner */}
+                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 p-6 rounded-3xl text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4">
+                    <img src={activeDoctor.avatar} alt={activeDoctor.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-teal-400 shadow-md" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-400/30">
+                        {activeDoctor.specialty}
+                      </span>
+                      <h1 className="text-2xl font-black text-white mt-1">{activeDoctor.name}</h1>
+                      <p className="text-xs text-slate-300">{activeDoctor.hospital} • ₹{activeDoctor.consultationFee}/visit</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/10 px-4 py-2.5 rounded-2xl border border-white/10 text-xs">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Today's Shift</span>
+                    <span className="font-bold text-white">
+                      {activeDoctor.workingHours.morning.start} - {activeDoctor.workingHours.morning.end} &amp; {activeDoctor.workingHours.evening.start} - {activeDoctor.workingHours.evening.end}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4 Metric Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Today's Appointments</span>
+                    <div className="text-2xl font-black text-slate-900 mt-1">{todayCount}</div>
+                    <span className="text-[11px] text-teal-600 font-semibold">Active schedule</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Pending Approvals</span>
+                    <div className="text-2xl font-black text-amber-500 mt-1">{pendingCount}</div>
+                    <span className="text-[11px] text-slate-400 font-medium">Awaiting action</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Completed Visits</span>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">{completedCount}</div>
+                    <span className="text-[11px] text-emerald-600 font-semibold">Treated &amp; Prescribed</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Estimated Revenue</span>
+                    <div className="text-2xl font-black text-slate-900 mt-1">₹{revenue.toLocaleString()}</div>
+                    <span className="text-[11px] text-slate-400 font-medium">From consultations</span>
+                  </div>
+                </div>
+
+                {/* Queue Table */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">Patient Appointment Queue</h2>
+                      <p className="text-xs text-slate-500">Manage patient consultations, confirm slots, and write medical notes</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] border-b border-slate-100">
+                        <tr>
+                          <th className="py-3 px-4">ID &amp; Date</th>
+                          <th className="py-3 px-4">Patient Information</th>
+                          <th className="py-3 px-4">Slot &amp; Mode</th>
+                          <th className="py-3 px-4">Reason / Notes</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {docApts.map(apt => (
+                          <tr key={apt.id} className="hover:bg-slate-50">
+                            <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                              {apt.id}
+                              <div className="text-slate-400 font-sans text-[11px] font-normal">{apt.date}</div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-900">{apt.patientName}</div>
+                              <div className="text-slate-400 text-[11px]">{apt.patientPhone} • {apt.patientAge}y, {apt.patientGender}</div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-slate-800">{apt.timeSlot}</div>
+                              <div className="text-cyan-700 text-[11px] font-medium">{apt.mode}</div>
+                            </td>
+                            <td className="py-3.5 px-4 max-w-xs truncate text-slate-600">
+                              {apt.reason}
+                              {apt.consultationNotes && (
+                                <div className="text-[10px] text-teal-600 font-semibold mt-0.5">✓ Notes Prescribed</div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                apt.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-700' :
+                                apt.status === 'Completed' ? 'bg-cyan-50 text-cyan-700' :
+                                apt.status === 'Pending' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
+                              }`}>
+                                ● {apt.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right space-x-2">
+                              {apt.status === 'Pending' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(apt.id, 'Confirmed')}
+                                  className="px-2.5 py-1 text-[11px] font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
+                                >
+                                  Accept Slot
+                                </button>
+                              )}
+                              {apt.status === 'Confirmed' && (
+                                <button
+                                  onClick={() => setNotesApt(apt)}
+                                  className="px-2.5 py-1 text-[11px] font-bold text-white bg-teal-600 rounded-lg hover:bg-teal-700"
+                                >
+                                  Complete &amp; Prescribe
+                                </button>
+                              )}
+                              {apt.status === 'Completed' && (
+                                <button
+                                  onClick={() => setPrescriptionViewApt(apt)}
+                                  className="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 rounded-lg"
+                                >
+                                  View Notes
+                                </button>
+                              )}
+                              {apt.status !== 'Cancelled' && apt.status !== 'Completed' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(apt.id, 'Cancelled')}
+                                  className="px-2 py-1 text-[11px] text-rose-600 hover:text-rose-800"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4: SCHEDULE & SLOTS SETTINGS */}
+            {role === 'doctor' && view === 'doctor-schedule' && (
+              <div className="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">Clinic Availability &amp; Shift Schedule</h1>
+                  <p className="text-xs text-slate-500">Configure consultation days, hours, and slot intervals for {activeDoctor.name}</p>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2">CONSULTATION DAYS</label>
+                    <div className="flex flex-wrap gap-2">
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                        const active = activeDoctor.availableDays.includes(day);
+                        return (
+                          <button
+                            key={day}
+                            onClick={() => {
+                              const updated = active
+                                ? activeDoctor.availableDays.filter(d => d !== day)
+                                : [...activeDoctor.availableDays, day];
+                              handleSaveSchedule({ availableDays: updated });
+                            }}
+                            className={`px-3.5 py-2 rounded-xl font-bold border transition-all ${
+                              active ? 'bg-teal-600 text-white border-transparent' : 'bg-slate-50 text-slate-500 border-slate-200'
+                            }`}
+                          >
+                            {day} ({active ? 'Open' : 'Off'})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">SLOT DURATION</label>
+                      <select
+                        value={activeDoctor.slotDurationMinutes}
+                        onChange={(e) => handleSaveSchedule({ slotDurationMinutes: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
+                      >
+                        <option value={15}>15 Minutes</option>
+                        <option value={20}>20 Minutes</option>
+                        <option value={30}>30 Minutes</option>
+                        <option value={45}>45 Minutes</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">CONSULTATION FEE (₹)</label>
+                      <input
+                        type="number"
+                        value={activeDoctor.consultationFee}
+                        onChange={(e) => handleSaveSchedule({ consultationFee: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-semibold">
+                    ✓ Schedule adjustments take effect immediately on the patient booking calendar.
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* ================================================= */}
+          {/* MODALS */}
+          {/* ================================================= */}
+
+          {/* 1. BOOKING MODAL */}
+          {bookingDoctor && (
+            <BookingModalDialog
+              doctor={bookingDoctor}
+              onClose={() => setBookingDoctor(null)}
+              onConfirm={handleBookAppointment}
+              appointments={appointments}
+            />
+          )}
+
+          {/* 2. CONFIRMED PASS MODAL */}
+          {confirmedPass && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div id="printable-pass" className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white text-center">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto text-xl mb-2">✓</div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-100">Appointment Confirmed</span>
+                  <h3 className="text-xl font-extrabold text-white mt-0.5">Digital Booking Pass</h3>
+                </div>
+
+                <div className="p-6 space-y-4 text-xs">
+                  <div className="flex justify-between items-center pb-3 border-b border-dashed border-slate-200">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-bold">APPOINTMENT ID</span>
+                      <span className="font-mono text-base font-black text-slate-900">{confirmedPass.id}</span>
+                    </div>
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-full">● Confirmed</span>
+                  </div>
+
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[10px] font-bold">DOCTOR</span>
+                    <div className="font-bold text-slate-900 text-sm">{confirmedPass.doctorName}</div>
+                    <div className="text-cyan-700 font-semibold">{confirmedPass.specialty}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <span className="text-slate-400 block text-[10px]">DATE</span>
+                      <span className="font-bold text-slate-800">{confirmedPass.date}</span>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                      <span className="text-slate-400 block text-[10px]">TIME</span>
+                      <span className="font-bold text-slate-800">{confirmedPass.timeSlot}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 pt-2 text-slate-600">
+                    <div className="flex justify-between"><span>Patient:</span><strong className="text-slate-900">{confirmedPass.patientName}</strong></div>
+                    <div className="flex justify-between"><span>Phone:</span><span>{confirmedPass.patientPhone}</span></div>
+                    <div className="flex justify-between"><span>Consultation Mode:</span><strong className="text-cyan-800">{confirmedPass.mode}</strong></div>
+                    <div className="flex justify-between pt-2 border-t border-slate-100 font-bold text-slate-900">
+                      <span>Consultation Fee:</span><span>₹{confirmedPass.fee}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between">
+                  <button onClick={() => window.print()} className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+                    🖨️ Print Pass
+                  </button>
+                  <button
+                    onClick={() => { setConfirmedPass(null); setView('my-appointments'); }}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700"
+                  >
+                    View My Appointments →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. DOCTOR PROFILE DETAIL MODAL */}
+          {profileDoctor && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100">
+                <div className="bg-gradient-to-r from-slate-900 to-cyan-950 p-6 text-white flex justify-between items-start">
+                  <div className="flex items-center space-x-4">
+                    <img src={profileDoctor.avatar} alt={profileDoctor.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-cyan-400" />
+                    <div>
+                      <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-bold">
+                        {profileDoctor.specialty}
+                      </span>
+                      <h3 className="text-lg font-bold text-white mt-1">{profileDoctor.name}</h3>
+                      <p className="text-xs text-slate-300">{profileDoctor.degrees}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setProfileDoctor(null)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+
+                <div className="p-6 space-y-4 text-xs">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">CLINIC / HOSPITAL</span>
+                    <p className="font-semibold text-slate-800">{profileDoctor.hospital}</p>
+                    <p className="text-slate-500">{profileDoctor.clinicAddress}</p>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">ABOUT SPECIALIST</span>
+                    <p className="text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">{profileDoctor.about}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-slate-700">
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <strong>Experience:</strong> {profileDoctor.experienceYears} Years
+                    </div>
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <strong>Fee:</strong> ₹{profileDoctor.consultationFee} / consultation
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between">
+                  <button onClick={() => setProfileDoctor(null)} className="px-3 py-1.5 text-xs text-slate-600 font-semibold">
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      const doc = profileDoctor;
+                      setProfileDoctor(null);
+                      setBookingDoctor(doc);
+                    }}
+                    className="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl"
+                  >
+                    Proceed to Book Slot →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. CONSULTATION NOTES RECORDING MODAL */}
+          {notesApt && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100">
+                <div className="bg-slate-900 p-6 text-white flex justify-between items-start">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-teal-400">Clinical Consultation</span>
+                    <h3 className="text-lg font-bold text-white mt-1">Complete Visit &amp; Prescribe</h3>
+                    <p className="text-xs text-slate-300">Patient: {notesApt.patientName} ({notesApt.patientAge}y, {notesApt.patientGender})</p>
+                  </div>
+                  <button onClick={() => setNotesApt(null)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const n = e.target.notes.value;
+                    const p = e.target.pres.value;
+                    handleSaveNotes(notesApt.id, n, p);
+                  }}
+                  className="p-6 space-y-4 text-xs"
+                >
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-600 italic">
+                    Reason: {notesApt.reason}
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Diagnosis &amp; Clinical Notes *</label>
+                    <textarea
+                      name="notes"
+                      rows={3}
+                      defaultValue={notesApt.consultationNotes}
+                      required
+                      placeholder="e.g. Acute bronchitis diagnosed. Vitals normal. Advised rest and fluids."
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    ></textarea>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Prescription Medications (Optional)</label>
+                    <textarea
+                      name="pres"
+                      rows={3}
+                      defaultValue={notesApt.prescription}
+                      placeholder="1. Tab Amoxicillin 500mg TDS x 5 days&#10;2. Syp Ambroxol 10ml BD x 5 days"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                    ></textarea>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                    <button type="button" onClick={() => setNotesApt(null)} className="px-3 py-1.5 text-xs text-slate-600">Cancel</button>
+                    <button type="submit" className="px-5 py-2 text-xs font-bold text-white bg-teal-600 rounded-xl hover:bg-teal-700">
+                      Save &amp; Mark Completed ✓
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* 5. VIEW PRESCRIPTION MODAL */}
+          {prescriptionViewApt && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+                <div className="bg-gradient-to-r from-cyan-700 to-teal-700 p-6 text-white flex justify-between items-start">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-cyan-200">Prescription Record</span>
+                    <h3 className="text-lg font-bold text-white mt-1">{prescriptionViewApt.doctorName}</h3>
+                    <p className="text-xs text-cyan-100">{prescriptionViewApt.specialty}</p>
+                  </div>
+                  <button onClick={() => setPrescriptionViewApt(null)} className="text-white">✕</button>
+                </div>
+
+                <div className="p-6 space-y-4 text-xs">
+                  <div className="flex justify-between border-b pb-2 text-slate-500">
+                    <span>Patient: <strong className="text-slate-800">{prescriptionViewApt.patientName}</strong></span>
+                    <span>Date: <strong className="text-slate-800">{prescriptionViewApt.date}</strong></span>
+                  </div>
+
+                  <div>
+                    <span className="font-bold text-slate-700 block mb-1 uppercase text-[10px]">Diagnosis:</span>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-slate-800">
+                      {prescriptionViewApt.consultationNotes || 'No notes recorded.'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="font-bold text-slate-700 block mb-1 uppercase text-[10px]">Medicines Prescribed:</span>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 font-mono text-slate-800 whitespace-pre-line">
+                      {prescriptionViewApt.prescription || 'No medicines prescribed.'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-100 text-right">
+                  <button onClick={() => setPrescriptionViewApt(null)} className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold">
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="bg-white border-t border-slate-200 py-6 mt-12 text-xs text-slate-500">
+            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <strong>MediConnect</strong> • Doctor &amp; Appointment Management System in React
+              </div>
+              <div className="flex items-center space-x-3">
+                <button onClick={handleResetDemoData} className="text-rose-600 font-semibold hover:underline">
+                  Reset Sample Data
+                </button>
+                <span>•</span>
+                <span>Production-Ready React Platform</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 3. BOOKING MODAL DIALOG COMPONENT
+    // ==========================================
+    function BookingModalDialog({ doctor, onClose, onConfirm, appointments }) {
+      const [step, setStep] = useState(1);
+      const [mode, setMode] = useState(doctor.consultationModes[0] || 'In-Clinic');
+      const [date, setDate] = useState(getTodayDateStr());
+      const [slot, setSlot] = useState('');
+
+      const [patientName, setPatientName] = useState('');
+      const [patientPhone, setPatientPhone] = useState('');
+      const [patientEmail, setPatientEmail] = useState('');
+      const [patientAge, setPatientAge] = useState('');
+      const [patientGender, setPatientGender] = useState('Male');
+      const [reason, setReason] = useState('');
+
+      const slots = [
+        '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM',
+        '01:00 PM', '01:30 PM', '02:00 PM',
+        '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM', '07:00 PM', '07:30 PM', '08:00 PM'
+      ];
+
+      const isBooked = (s) => {
+        return appointments.some(a => a.doctorId === doctor.id && a.date === date && a.timeSlot === s && a.status !== 'Cancelled');
+      };
+
+      const handleNext = () => {
+        if (step === 1) {
+          if (!slot) {
+            alert('Please select an available time slot.');
+            return;
+          }
+          setStep(2);
+        } else if (step === 2) {
+          if (!patientName.trim() || !patientPhone.trim() || !patientEmail.trim() || !patientAge || !reason.trim()) {
+            alert('Please fill out all required fields.');
+            return;
+          }
+          onConfirm({
+            doctorId: doctor.id,
+            doctorName: doctor.name,
+            specialty: doctor.specialty,
+            fee: doctor.consultationFee,
+            date,
+            timeSlot: slot,
+            mode,
+            patientName,
+            patientPhone,
+            patientEmail,
+            patientAge: Number(patientAge),
+            patientGender,
+            reason
+          });
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl overflow-hidden border border-slate-100">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-slate-900 to-cyan-950 p-6 text-white flex justify-between items-start">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-cyan-300">Book Appointment</span>
+                <h3 className="text-lg font-bold text-white mt-1">{doctor.name}</h3>
+                <p className="text-xs text-slate-300">{doctor.specialty} • ₹{doctor.consultationFee}</p>
+              </div>
+              <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
+              {step === 1 ? (
+                <div className="space-y-4">
+                  {/* Mode */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px]">Consultation Mode</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {doctor.consultationModes.map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setMode(m)}
+                          className={`p-3 rounded-xl border text-left font-bold transition-all ${
+                            mode === m ? 'border-cyan-600 bg-cyan-50 text-cyan-900' : 'border-slate-200 bg-slate-50 text-slate-600'
+                          }`}
+                        >
+                          {m === 'In-Clinic' ? '🏥 In-Clinic' : '💻 Video Call'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Date */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px]">Select Date</label>
+                    <input
+                      type="date"
+                      value={date}
+                      min={getTodayDateStr()}
+                      onChange={(e) => { setDate(e.target.value); setSlot(''); }}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
+                    />
+                  </div>
+
+                  {/* Slots */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px]">Select Time Slot</label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {slots.map(s => {
+                        const booked = isBooked(s);
+                        const isSel = slot === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            disabled={booked}
+                            onClick={() => setSlot(s)}
+                            className={`p-2 rounded-lg text-center font-semibold transition-all ${
+                              booked ? 'bg-slate-200 text-slate-400 cursor-not-allowed line-through' :
+                              isSel ? 'bg-cyan-600 text-white font-bold shadow-xs' :
+                              'bg-slate-50 hover:bg-cyan-50 border border-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-cyan-50 p-3 rounded-xl border border-cyan-200 font-bold text-cyan-900">
+                    Slot: {date} at {slot} ({mode})
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Patient Full Name *</label>
+                      <input
+                        type="text"
+                        value={patientName}
+                        onChange={(e) => setPatientName(e.target.value)}
+                        placeholder="e.g. Rahul Sharma"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Phone Number *</label>
+                      <input
+                        type="tel"
+                        value={patientPhone}
+                        onChange={(e) => setPatientPhone(e.target.value)}
+                        placeholder="e.g. +91 98765 43210"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <label className="block font-bold text-slate-700 mb-1">Email Address *</label>
+                      <input
+                        type="email"
+                        value={patientEmail}
+                        onChange={(e) => setPatientEmail(e.target.value)}
+                        placeholder="e.g. patient@gmail.com"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Age *</label>
+                      <input
+                        type="number"
+                        value={patientAge}
+                        onChange={(e) => setPatientAge(e.target.value)}
+                        placeholder="32"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Gender</label>
+                    <div className="flex space-x-3">
+                      {['Male', 'Female', 'Other'].map(g => (
+                        <label key={g} className="flex items-center space-x-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="gender"
+                            value={g}
+                            checked={patientGender === g}
+                            onChange={(e) => setPatientGender(e.target.value)}
+                          />
+                          <span>{g}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Primary Symptoms / Reason for Visit *</label>
+                    <textarea
+                      rows={3}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="Briefly state your symptoms, existing medical history, or consultation goals..."
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"
+                    ></textarea>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-xs">
+              <span className="font-bold text-slate-900">Total Fee: ₹{doctor.consultationFee}</span>
+              <div className="flex space-x-2">
+                {step === 2 && (
+                  <button onClick={() => setStep(1)} className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl font-semibold">
+                    Back
+                  </button>
+                )}
+                <button
+                  onClick={handleNext}
+                  className="px-5 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 text-white rounded-xl font-bold shadow-xs hover:from-cyan-700 hover:to-teal-700"
+                >
+                  {step === 1 ? 'Next: Patient Details →' : 'Confirm & Book Slot ✓'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
